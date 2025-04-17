@@ -35,7 +35,7 @@ API Calls
 */
 
 const fetchWeather = async (cityName: string) => {
-  const response = await fetch('/api/weather/', {
+  const response = await fetch('/api/weather', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -45,10 +45,22 @@ const fetchWeather = async (cityName: string) => {
 
   const weatherData = await response.json();
 
-  console.log('weatherData: ', weatherData);
 
-  renderCurrentWeather(weatherData[0]);
-  renderForecast(weatherData.slice(1));
+  renderCurrentWeather(weatherData);
+};
+
+const fetchforecast = async (cityName: string) => {
+  const response = await fetch('/api/weather/forecast', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ cityName }),
+  });
+
+  const forecast = await response.json();
+
+  renderForecast(forecast);
 };
 
 const fetchSearchHistory = async () => {
@@ -58,6 +70,7 @@ const fetchSearchHistory = async () => {
       'Content-Type': 'application/json',
     },
   });
+  
   return history;
 };
 
@@ -76,9 +89,10 @@ Render Functions
 
 */
 
-const renderCurrentWeather = (currentWeather: any): void => {
-  const { city, date, icon, iconDescription, tempF, windSpeed, humidity } =
-    currentWeather;
+const renderCurrentWeather = (d: any): void => {  
+
+  const { city, date, icon, iconDescription, temperature, windSpeed, humidity } =
+    d;
 
   // convert the following to typescript
   heading.textContent = `${city} (${date})`;
@@ -89,7 +103,7 @@ const renderCurrentWeather = (currentWeather: any): void => {
   weatherIcon.setAttribute('alt', iconDescription);
   weatherIcon.setAttribute('class', 'weather-img');
   heading.append(weatherIcon);
-  tempEl.textContent = `Temp: ${tempF}°F`;
+  tempEl.textContent = `Temp: ${temperature}°F`;
   windEl.textContent = `Wind: ${windSpeed} MPH`;
   humidityEl.textContent = `Humidity: ${humidity} %`;
 
@@ -112,13 +126,20 @@ const renderForecast = (forecast: any): void => {
     forecastContainer.append(headingCol);
   }
 
-  for (let i = 0; i < forecast.length; i++) {
+  for (let i = 0; i < forecast.length; i=i+8) {
+    console.log(forecast[i])
     renderForecastCard(forecast[i]);
   }
 };
 
 const renderForecastCard = (forecast: any) => {
-  const { date, icon, iconDescription, tempF, windSpeed, humidity } = forecast;
+
+  const  date = forecast.dt_txt.slice(0,10);
+  const  temperature = forecast.main.temp_max;
+  const  humidity = forecast.main.humidity;
+  const  windSpeed = forecast.wind.speed;
+  const  icon = forecast.weather[0].icon;
+  const  iconDescription = forecast.weather[0].description;
 
   const { col, cardTitle, weatherIcon, tempEl, windEl, humidityEl } =
     createForecastCard();
@@ -130,7 +151,7 @@ const renderForecastCard = (forecast: any) => {
     `https://openweathermap.org/img/w/${icon}.png`
   );
   weatherIcon.setAttribute('alt', iconDescription);
-  tempEl.textContent = `Temp: ${tempF} °F`;
+  tempEl.textContent = `Temp: ${temperature} °F`;
   windEl.textContent = `Wind: ${windSpeed} MPH`;
   humidityEl.textContent = `Humidity: ${humidity} %`;
 
@@ -140,7 +161,11 @@ const renderForecastCard = (forecast: any) => {
 };
 
 const renderSearchHistory = async (searchHistory: any) => {
-  const historyList = await searchHistory.json();
+  
+  const historyList = await (await searchHistory()).json();
+
+  console.log('test3: ',historyList);
+  
 
   if (searchHistoryContainer) {
     searchHistoryContainer.innerHTML = '';
@@ -235,7 +260,7 @@ const createHistoryDiv = () => {
 };
 
 const buildHistoryListItem = (city: any) => {
-  const newBtn = createHistoryButton(city.name);
+  const newBtn = createHistoryButton(city.city);
   const deleteBtn = createDeleteButton();
   deleteBtn.dataset.city = JSON.stringify(city);
   const historyDiv = createHistoryDiv();
@@ -258,6 +283,7 @@ const handleSearchFormSubmit = (event: any): void => {
 
   const search: string = searchInput.value.trim();
   fetchWeather(search).then(() => {
+    fetchforecast(search);
     getAndRenderHistory();
   });
   searchInput.value = '';
@@ -283,7 +309,7 @@ Initial Render
 */
 
 const getAndRenderHistory = () =>
-  fetchSearchHistory().then(renderSearchHistory);
+  fetchSearchHistory().then(()=>renderSearchHistory(fetchSearchHistory));
 
 searchForm?.addEventListener('submit', handleSearchFormSubmit);
 searchHistoryContainer?.addEventListener('click', handleSearchHistoryClick);

@@ -1,17 +1,42 @@
-// TODO: Define a City class with name and id properties
+import fs from 'node:fs/promises';
 
-// TODO: Complete the HistoryService class
-class HistoryService {
-  // TODO: Define a read method that reads from the searchHistory.json file
-  // private async read() {}
-  // TODO: Define a write method that writes the updated cities array to the searchHistory.json file
-  // private async write(cities: City[]) {}
-  // TODO: Define a getCities method that reads the cities from the searchHistory.json file and returns them as an array of City objects
-  // async getCities() {}
-  // TODO Define an addCity method that adds a city to the searchHistory.json file
-  // async addCity(city: string) {}
-  // * BONUS TODO: Define a removeCity method that removes a city from the searchHistory.json file
-  // async removeCity(id: string) {}
+interface CityHistory {
+  id: string;
+  city: string;
 }
 
-export default new HistoryService();
+const historyFilePath = `db/db.json`;
+
+class HistoryService {
+  private static async readHistory(): Promise<CityHistory[]> {
+    try {
+      const data = await fs.readFile(historyFilePath, 'utf-8');
+      return JSON.parse(data);
+    } catch (error) {
+      return [];
+    }
+  }
+
+  private static writeHistory(history: CityHistory[]): void {
+    fs.writeFile(historyFilePath, JSON.stringify(history, null, 2));
+  }
+
+  static async saveCity(city: string): Promise<void> {
+    const history = await this.readHistory();
+    const id = (Math.random() * 100000).toString(); 
+    history.push({ id, city });
+    this.writeHistory(history);
+  }
+
+  static async getHistory(): Promise<CityHistory[]> {
+    return this.readHistory();
+  }
+
+  static async deleteCity(id: string): Promise<void> {
+    let history = await this.readHistory();
+    history = history.filter(city => city.id !== id);
+    this.writeHistory(history);
+  }
+}
+
+export default HistoryService;
